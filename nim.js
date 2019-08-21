@@ -8,17 +8,24 @@ function rand(l,r) {
 	return l+Math.floor(Math.random()*(r-l+1));
 }
 
+function sum(arr) {
+	let s = 0;
+	for(let x of arr) s += x;
+	return s;
+}
+
 function takeStone(row) {
 	--arr[row];
-	if(arr[row]) {
-		$(`#stone-${row}-${arr[row]}`).width('0px');
-	}else {
-		$(`#stone-${row}-${arr[row]}`).css('opacity', '0');
-	}
+	let stone = $(`#stone-${row}-${arr[row]}`);
+	if(arr[row] != 0)
+		stone.width('0px');
+	else
+		stone.css('opacity', '0');
 	$(`#cnt${row}`).text(`${arr[row]}`);
 }
 
 function playerTake(row) {
+	if(playerTaken == null) return;
 	if(arr[row] == 0) {
 		alert("You cannot take stone in a empty pile");
 		return;
@@ -33,59 +40,53 @@ function playerTake(row) {
 	if(arr[row] == 0) comTake();
 }
 
-function comTake() {
-	if(playerTaken.cnt == 0) {
-		alert("You haven't move yet!");
-		return;
-	}
-	playerTaken = {
-		cnt: 0,
-		row: -1,
-	};
-	let tot = 0;
-	for(let i = 0; i < arr.length; i++) tot += arr[i];
-	if(tot == 0) {
-		alert("Player Win!");
-		return;
-	}
-	$(`#ready`).hide();
+function comCalc(arr) {
 	let xor_sum = 0;
 	for(let i = 0; i < arr.length; i++) xor_sum ^= arr[i];
 	let moves = [];
 	if(xor_sum == 0) {
-		for(let i = 0; i < arr.length; i++) if(arr[i] != 0) {
+		for(let i = 0; i < arr.length; i++) for(let j = 1; j <= arr[i]; j++) {
 			moves.push({
-				pos: i,
-				num: rand(1,arr[i]),
+				cnt: j,
+				row: i,
 			});
 		}
 	}else {
 		for(let i = 0; i < arr.length; i++) if((arr[i]^xor_sum) < arr[i]) {
 			moves.push({
-				pos: i,
-				num: arr[i] - (arr[i]^xor_sum),
+				cnt: arr[i] - (arr[i]^xor_sum),
+				row: i,
 			});
 		}
-		/*
-		for(let i = 0; i < arr.length; i++) {
-			console.log("num = " + (arr[i] - (arr[i]^xor_sum)));
-		}
-		console.log("COM takes " + pos + "*" + num);
-		*/
 	}
-	let id = rand(0,moves.length-1);
-	let delay_time = 500 / (moves[id].num);
-	for(let i = 0; i < moves[id].num; i++) {
-		setTimeout(takeStone, delay_time*(i+1), moves[id].pos);
+	return moves;
+}
+
+function comTake() {
+	if(playerTaken.cnt == 0) {
+		alert("You haven't move yet!");
+		return;
+	}
+	playerTaken = null;
+	$(`#ready`).hide();
+	if(sum(arr) == 0) {
+		alert("Player Win!");
+		return;
+	}
+	let moves = comCalc(arr);
+	let m = moves[rand(0,moves.length-1)];
+	let delay_time = 500 / m.cnt;
+	for(let i = 0; i < m.cnt; i++) {
+		setTimeout(takeStone, delay_time*(i+1), m.row);
 	}
 	setTimeout(function() {
-		let tot = 0;
-		for(let i = 0; i < arr.length; i++) tot += arr[i];
-		if(tot == 0) {
-			alert("Computer Win!");
-		}
+		if(sum(arr) == 0) alert("Computer Win!");
 		$(`#ready`).show();
-	}, delay_time*moves[id].num);
+		playerTaken = {
+			cnt: 0,
+			row: -1,
+		};
+	}, delay_time*(m.cnt+1));
 }
 
 function showRule() {
@@ -96,11 +97,11 @@ function showTuto() {
 	window.open("https://hackmd.io/p8NFDRJ8TkqPxg4JLp51hQ");
 }
 
-function calcXor() {
-	let arr = prompt("input some integers").split(' ');
-	let sum = 0;
-	for(let i in arr) sum ^= arr[i];
-	alert(sum);
+function getHint() {
+	let arr = prompt("input some integers, split by spaces").split(' ');
+	let moves = comCalc(arr);
+	let m = moves[rand(0,moves.length-1)];
+	alert(arr[m.row] + " " + m.cnt);
 }
 
 function init(n,C) {
@@ -124,7 +125,7 @@ function init(n,C) {
 	$(`body`).append(`
 		<button id="reset" class="btn btn-info" style="font-size: 25px" onclick="location.reload()"> Reset </button>
 		<button id="rules" class="btn btn-info" style="font-size: 25px" onclick="showRule()"> Rules </button>
-		<button id="hint"  class="btn btn-info" style="font-size: 25px" onclick="calcXor()"> Hint </button>
+		<button id="hint"  class="btn btn-info" style="font-size: 25px" onclick="getHint()"> Hint </button>
 		<button id="tutor" class="btn btn-info" style="font-size: 25px" onclick="showTuto()"> Tutorial </button>
 		<button id="ready" class="btn btn-info" style="font-size: 25px" onclick="comTake()"> OK! </button>
 	`);
